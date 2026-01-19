@@ -11,6 +11,8 @@ import { StoryConfig, StoryState, StoryStep, Character, SocialStoryTemplate, Soc
 import { generateSocialStoryScene, generateCharacterReference, generateImage } from './services/socialStoryApi';
 import { mergeMultipleImages } from './utils/imageUtils';
 import { saveStory, getSavedStories, deleteStory, updateLastViewed, getSavedStoriesCount } from './services/storageService';
+import { EXAMPLE_STORIES_DATA } from './src/data/examples';
+import { getTemplateById } from './src/data/templates';
 
 const INITIAL_STATE: StoryState = {
   currentDepth: 0,
@@ -547,8 +549,27 @@ function App() {
 
   const handleSelectExample = (exampleId: string) => {
     console.log('Selected example:', exampleId);
-    // TODO: Load and display example story
-    alert(`Example story "${exampleId}" - Coming in Stage 8!`);
+
+    const example = EXAMPLE_STORIES_DATA.find(e => e.id === exampleId);
+    if (!example) {
+      console.error('Example not found:', exampleId);
+      return;
+    }
+
+    const template = getTemplateById(example.templateId);
+    if (!template) {
+      console.error('Template not found for example:', example.templateId);
+      return;
+    }
+
+    // Set state for "New Story" mode
+    setStorySaved(false);
+    setCurrentStoryId(null);
+    setSelectedTemplate(template);
+    setCustomScenario(null);
+
+    // Trigger generation immediately with example config
+    generateStory(example.config, template, null);
   };
 
   // Handlers for Saved Stories

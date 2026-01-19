@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SocialStoryTemplate } from '../src/types';
 import { SOCIAL_STORY_TEMPLATES, getTemplatesByCategory } from '../src/data/templates';
+import { EXAMPLE_STORIES_DATA } from '../src/data/examples';
 
 interface ScenarioSelectorProps {
     onSelectTemplate: (template: SocialStoryTemplate) => void;
@@ -32,12 +33,8 @@ const ScenarioSelector: React.FC<ScenarioSelectorProps> = ({
         ? SOCIAL_STORY_TEMPLATES
         : getTemplatesByCategory(selectedCategory as SocialStoryTemplate['category']);
 
-    // Example stories (placeholder for now)
-    const exampleStories = [
-        { id: 'alex-dentist', title: 'Alex Goes to the Dentist', icon: '🦷', description: 'See an example story' },
-        { id: 'sam-school', title: 'Sam\'s First Day of School', icon: '🏫', description: 'See an example story' },
-        { id: 'jordan-airplane', title: 'Jordan Flies on an Airplane', icon: '✈️', description: 'See an example story' }
-    ];
+    // Use shared example data
+    const exampleStories = EXAMPLE_STORIES_DATA;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-12 px-4">
