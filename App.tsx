@@ -657,26 +657,31 @@ function App() {
 
         // STAGE 5: Generate character reference for newly introduced people
         if (scene.person_introduced) {
-          console.log(`Generating reference for ${scene.person_introduced.name} (${scene.person_introduced.role})...`);
+          // CHECK: Do we already have a reference for this role?
+          if (peopleRefsMap.has(scene.person_introduced.role)) {
+            console.log(`Skipping reference generation for ${scene.person_introduced.role} (already exists).`);
+          } else {
+            console.log(`Generating NEW reference for ${scene.person_introduced.name} (${scene.person_introduced.role})...`);
 
-          const personRefResult = await generateCharacterReference(
-            scene.person_introduced.description,
-            config.artStyle
-          );
+            const personRefResult = await generateCharacterReference(
+              scene.person_introduced.description,
+              config.artStyle
+            );
 
-          // Store in local map for immediate use
-          peopleRefsMap.set(scene.person_introduced.role, personRefResult.imageUrl);
+            // Store in local map for immediate use
+            peopleRefsMap.set(scene.person_introduced.role, personRefResult.imageUrl);
 
-          setSocialStory(prev => {
-            const newPeopleRefs = new Map(prev.peopleRefs);
-            newPeopleRefs.set(scene.person_introduced!.role, personRefResult.imageUrl);
-            return {
-              ...prev,
-              peopleRefs: newPeopleRefs
-            };
-          });
+            setSocialStory(prev => {
+              const newPeopleRefs = new Map(prev.peopleRefs);
+              newPeopleRefs.set(scene.person_introduced!.role, personRefResult.imageUrl);
+              return {
+                ...prev,
+                peopleRefs: newPeopleRefs
+              };
+            });
 
-          console.log(`Reference created for ${scene.person_introduced.role}:`, personRefResult.imageUrl);
+            console.log(`Reference created for ${scene.person_introduced.role}:`, personRefResult.imageUrl);
+          }
         }
 
         // STAGE 6: Generate scene image with character references
@@ -690,18 +695,15 @@ function App() {
           characterRefsForScene.push(childCharacterRefUrl);
         }
 
-        // Add any people who have been introduced so far
-        // (We use generatedScenes to know which people have appeared)
-        const introducedPeople = generatedScenes
-          .filter(s => s.person_introduced)
-          .map(s => s.person_introduced!.role);
-
-        introducedPeople.forEach(role => {
-          const peopleRef = peopleRefsMap.get(role); // Use local map, not state
+        // Only add the person relevant to THIS scene (if any)
+        // We do NOT add all previously introduced people, as that confuses the AI 
+        // regarding who is who in the reference sheet.
+        if (scene.person_introduced) {
+          const peopleRef = peopleRefsMap.get(scene.person_introduced.role);
           if (peopleRef) {
             characterRefsForScene.push(peopleRef);
           }
-        });
+        }
 
         // Merge character references into composite
         let compositeRef: string | null = null;
@@ -710,9 +712,38 @@ function App() {
           compositeRef = await mergeMultipleImages(characterRefsForScene);
         }
 
-        // Generate scene image using composite reference
+        // ENHANCE PROMPT: Explicitly inject character descriptions
+        // This ensures the model knows "The Doctor" is "Old, white hair" even if the reference is weak.
+        let enhancedPrompt = "";
+
+        // 1. Add Child Description
+        enhancedPrompt += `${config.childName} is ${config.childAppearance}. `;
+
+        // 2. Add Other Person Description (if applicable)
+        if (scene.person_introduced) {
+          enhancedPrompt += `${scene.person_introduced.name} (${scene.person_introduced.role}) is ${scene.person_introduced.description}. `;
+        } else {
+          // For scenes with recurring characters, we might need to look them up from previous scenes
+          // checking generatedScenes to find the description of the role
+          const sceneText = scene.scene_text + " " + scene.image_description;
+          peopleRefsMap.forEach((url, role) => {
+            // If the role is mentioned in this scene, try to find their description
+            if (sceneText.toLowerCase().includes(role.toLowerCase())) {
+              const originalIntroduction = generatedScenes.find(s => s.person_introduced?.role === role);
+              if (originalIntroduction && originalIntroduction.person_introduced) {
+                enhancedPrompt += `${originalIntroduction.person_introduced.name} is ${originalIntroduction.person_introduced.description}. `;
+              }
+            }
+          });
+        }
+
+        enhancedPrompt += scene.image_description;
+
+        console.log(`Enhanced Prompt for Scene ${i}:`, enhancedPrompt);
+
+        // Generate scene image using composite reference AND enhanced text prompt
         const sceneImageResult = await generateImage(
-          scene.image_description,
+          enhancedPrompt,
           config.artStyle,
           compositeRef
         );
