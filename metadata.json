@@ -1,0 +1,7 @@
+{
+  "name": "DreamWeaver Storybook",
+  "description": "A magical interactive storybook generator for children using Azure AI and FLUX Kontext.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

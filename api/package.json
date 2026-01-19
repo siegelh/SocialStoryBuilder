@@ -1,0 +1,11 @@
+{
+  "name": "dreamweaver-api",
+  "version": "1.0.0",
+  "description": "Backend for DreamWeaver",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
